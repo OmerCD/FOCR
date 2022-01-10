@@ -22,12 +22,15 @@ public class ImageSeparator
 
         Parallel.ForEach(ImagePieceConstants.AllPieces, piece =>
         {
-            var image = _imageProcessService.CensorTeamLogos(fullPath);
-            image = _imageProcessService.CropImage(image, piece);
-            image = _imageProcessService.DeColorExcept(image, piece);
+            var image = _imageProcessService.Builder
+                        .CensorTeamLogos(fullPath)
+                        .CropImage(piece)
+                        .DeColorExcept(piece).Build();
+
             image.Save(Path.Combine(combine, piece.Name + ".png"));
             image.Dispose();
         });
+
         return combine;
     }
 }

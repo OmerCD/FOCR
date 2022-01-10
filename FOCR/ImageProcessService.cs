@@ -3,8 +3,33 @@ using System.Drawing.Imaging;
 
 namespace FOCR;
 
+public interface IBuild
+{
+
+}
+public interface IHaveBuilder<T> where T : IBuild
+{
+    T Builder { get; }
+}
+public interface IImageProcessService : IHaveBuilder<ImageProcessBuilder>
+{
+    Bitmap CropImage(string imagePath, IImagePiece imagePiece);
+    Bitmap CropImage(string imagePath, int x, int y, int width, int height);
+    Bitmap DeColorExcept(string imagePath, IEnumerable<Color> colors);
+    Bitmap DeColorExcept(string imagePath, IImagePiece imagePiece);
+    Bitmap DeColorExcept(Bitmap image, IEnumerable<Color> colors);
+    Bitmap DeColorExcept(Bitmap image, IImagePiece imagePiece);
+    Bitmap CensorTeamLogos(Bitmap image);
+    Bitmap CensorTeamLogos(string imagePath);
+    Bitmap CropImage(Bitmap image, int x, int y, int width, int height);
+    Bitmap CropImage(Bitmap image, IImagePiece imagePiece);
+
+}
+
 public class ImageProcessService : IImageProcessService
 {
+    public ImageProcessBuilder Builder => new ImageProcessBuilder();
+
     public Bitmap CropImage(Bitmap image, int x, int y, int width, int height)
     {
         var croppedImage = new Bitmap(width, height);
@@ -84,7 +109,7 @@ public class ImageProcessService : IImageProcessService
     public Bitmap CensorTeamLogos(string imagePath)
     {
         using var image = Image.FromFile(imagePath);
-        
+
         return CensorTeamLogos(new Bitmap(image));
     }
     private static bool CheckColorWithTolerance(byte a, byte b, byte tolerance = 80)
@@ -105,16 +130,47 @@ public class ImageProcessService : IImageProcessService
     }
 }
 
-public interface IImageProcessService
+
+public class ImageProcessBuilder : IBuild
 {
-    Bitmap CropImage(string imagePath, IImagePiece imagePiece);
-    Bitmap CropImage(string imagePath, int x, int y, int width, int height);
-    Bitmap DeColorExcept(string imagePath, IEnumerable<Color> colors);
-    Bitmap DeColorExcept(string imagePath, IImagePiece imagePiece);
-    Bitmap DeColorExcept(Bitmap image, IEnumerable<Color> colors);
-    Bitmap DeColorExcept(Bitmap image, IImagePiece imagePiece);
-    Bitmap CensorTeamLogos(Bitmap image);
-    Bitmap CensorTeamLogos(string imagePath);
-    Bitmap CropImage(Bitmap image, int x, int y, int width, int height);
-    Bitmap CropImage(Bitmap image, IImagePiece imagePiece);
+    Bitmap _image = null;
+    IImageProcessService _imageProcessService;
+    public ImageProcessBuilder()
+    {
+        _imageProcessService = new ImageProcessService();
+    }
+    public ImageProcessBuilder CensorTeamLogos(string imagePath)
+    {
+
+        _image = _imageProcessService.CensorTeamLogos(imagePath);
+        return this;
+    }
+
+    public ImageProcessBuilder CropImage(IImagePiece imagePiece)
+    {
+
+        _image = _imageProcessService.CropImage(_image, imagePiece);
+        return this;
+    }
+
+    public ImageProcessBuilder DeColorExcept(IImagePiece imagePiece)
+    {
+        _image = _imageProcessService.DeColorExcept(_image, imagePiece);
+        return this;
+    }
+
+    public Bitmap ProcessAll(string imagePath, IImagePiece imagePiece)
+    {
+        return CensorTeamLogos(imagePath).CropImage(imagePiece).DeColorExcept(imagePiece).Build();
+    }
+
+    public Bitmap Build()
+    {
+        return _image.Clone(new Rectangle(0, 0, _image.Width, _image.Height), _image.PixelFormat);
+    }
+
+    public static implicit operator Bitmap(ImageProcessBuilder ipb)
+    {
+        return ipb.Build();
+    }
 }

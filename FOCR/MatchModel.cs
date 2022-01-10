@@ -9,6 +9,12 @@ public class MatchModel
     public IEnumerable<StatisticLineModel> Shooting { get; set; }
     public IEnumerable<StatisticLineModel> Passing { get; set; }
     public IEnumerable<StatisticLineModel> Defending { get; set; }
+
+    public override string ToString() => @$"HomeTeam : {HomeTeam} 
+                                            HomeScore : {HomeScore} 
+                                            {Environment.NewLine} 
+                                            AwayTeam: {AwayTeam}
+                                            AwayScore: {AwayScore}";
 }
 
 public class StatisticLineModel
