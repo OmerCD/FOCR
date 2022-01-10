@@ -18,11 +18,6 @@ public class MatchModelExtractor
         return $"[{jsonLines}]";
     }
 
-    private static string ReplaceFaultyChars(string text)
-    {
-        return text.Replace('a', '0').Replace('O', '0').Replace('o', '0');
-    }
-
     private static string GetJsonLine(string text)
     {
         var homeTeamIndex = text.IndexOf(' ');
@@ -30,8 +25,7 @@ public class MatchModelExtractor
         var homeValue = text.Substring(0, homeTeamIndex);
         var awayValue = text.Substring(awayTeamIndex + 1, text.Length - awayTeamIndex - 1);
         var key = text.Substring(homeTeamIndex + 1, awayTeamIndex - homeTeamIndex - 1);
-        return "{\"key\":\"" + key + "\",\"home\":\"" + ReplaceFaultyChars(homeValue) + "\",\"away\":\"" +
-               ReplaceFaultyChars(awayValue) + "\"}";
+        return "{\"key\":\"" + key + "\",\"home\":\"" + homeValue.ReplaceFaultyChars() + "\",\"away\":\"" + awayValue.ReplaceFaultyChars() + "\"}";
     }
 
     private string GetPossessionJson(string text)
@@ -41,14 +35,17 @@ public class MatchModelExtractor
         for (var i = 0; i < lines.Length; i++)
         {
             var values = lines[i].Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-            var jsonValue = "{\"key\":\"" + ((i + 1) * 15) + "\",\"home\":\"" + ReplaceFaultyChars(values[0]) +
-                            "\",\"away\":\"" +
-                            ReplaceFaultyChars(values[1]) + "\"}";
+            var jsonValue = "{\"key\":\"" + ((i + 1) * 15)
+                + "\",\"home\":\"" + values[0].ReplaceFaultyChars()
+                + "\",\"away\":\"" + values[1].ReplaceFaultyChars()
+                + "\"}";
+
             list.Add(jsonValue);
         }
 
         return "[" + string.Join(',', list) + "]";
     }
+
 
     private static IEnumerable<StatisticLineModel> GetPossessionModels(string text)
     {
@@ -60,8 +57,8 @@ public class MatchModelExtractor
             yield return new StatisticLineModel()
             {
                 Key = minute.ToString(),
-                Home = ReplaceFaultyChars(values[0]),
-                Away = ReplaceFaultyChars(values[1])
+                Home = values[0].ReplaceFaultyChars(),
+                Away = values[1].ReplaceFaultyChars()
             };
         }
     }
@@ -70,8 +67,8 @@ public class MatchModelExtractor
     {
         var homeTeamIndex = text.IndexOf(' ');
         var awayTeamIndex = text.LastIndexOf(' ');
-        var homeValue = ReplaceFaultyChars(text.Substring(0, homeTeamIndex));
-        var awayValue = ReplaceFaultyChars(text.Substring(awayTeamIndex + 1, text.Length - awayTeamIndex - 1));
+        var homeValue = text.Substring(0, homeTeamIndex).ReplaceFaultyChars();
+        var awayValue = text.Substring(awayTeamIndex + 1, text.Length - awayTeamIndex - 1).ReplaceFaultyChars();
         var key = text.Substring(homeTeamIndex + 1, awayTeamIndex - homeTeamIndex - 1);
         return new StatisticLineModel
         {
@@ -98,36 +95,35 @@ public class MatchModelExtractor
         var separator = new ImageSeparator(imagesPath, _imageProcessService);
         var matchModel = new MatchModel();
         string newPath = String.Empty;
-        Parallel.ForEach(files, image =>
+        Parallel.ForEach(files, async image =>
         {
             newPath = separator.Separate(Path.GetFileName(image));
+            newPath = separator.Separate(Path.GetFileName(image));
+            var details = await _ocrService.Read(Path.Combine(newPath, $"Details.png"));
+            var title = (await _ocrService.Read(Path.Combine(newPath, $"Title.png"))).Trim().Replace(" ", "").ToLower();
+            switch (title)
+            {
+                case "summary":
+                    matchModel.Summary = GetModels(details);
+                    break;
+                case "possession":
+                    matchModel.Possession = GetPossessionModels(details.Replace("%", "")).ToArray();
+                    break;
+                case "shooting":
+                    matchModel.Shooting = GetModels(details);
+                    break;
+                case "passing":
+                    matchModel.Passing = GetModels(details);
+                    break;
+                case "defending":
+                    matchModel.Defending = GetModels(details);
+                    break;
+            }
         });
-        // foreach (var image in files)
-        // {
-        //     newPath = separator.Separate(Path.GetFileName(image));
-        //     continue;
-        //     var details = await _ocrService.Read(Path.Combine(newPath, $"Details.png"));
-        //     var title = (await _ocrService.Read(Path.Combine(newPath, $"Title.png"))).Trim().Replace(" ", "").ToLower();
-        //     switch (title)
-        //     {
-        //         case "summary":
-        //             matchModel.Summary = GetModels(details);
-        //             break;
-        //         case "possession":
-        //             matchModel.Possession = GetPossessionModels(details.Replace("%", "")).ToArray();
-        //             break;
-        //         case "shooting":
-        //             matchModel.Shooting = GetModels(details);
-        //             break;
-        //         case "passing":
-        //             matchModel.Passing = GetModels(details);
-        //             break;
-        //         case "defending":
-        //             matchModel.Defending = GetModels(details);
-        //             break;
-        //     }
-        // }
+
         var teamInfos = await _ocrService.Read(Path.Combine(newPath, $"Teams.png"));
+        matchModel.SetTeamNamesAndScores(teamInfos);
+
         Console.WriteLine(teamInfos.Replace("\r\n", " "));
         Console.WriteLine(newPath);
         return matchModel;

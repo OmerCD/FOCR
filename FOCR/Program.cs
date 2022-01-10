@@ -1,5 +1,6 @@
 ﻿using FOCR;
 
+
 var mainDirectory = @"C:\Program Files (x86)\Steam\userdata\182075523\760\remote\1506830\screenshots\";
 var dateDirectories = Directory.GetDirectories(mainDirectory).Where(x => x.Contains("202"));
 
@@ -12,6 +13,8 @@ var extractor = new MatchModelExtractor(imageProcessService, ocrReader);
 
 foreach (var dateDirectory in dateDirectories)
 {
+
+
     var matchDirectories = Directory.GetDirectories(dateDirectory);
     foreach (var matchDirectory in matchDirectories)
     {
