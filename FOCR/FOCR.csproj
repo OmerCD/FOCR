@@ -10,8 +10,30 @@
     <ItemGroup>
       <PackageReference Include="Magick.NET.Core" Version="8.5.0" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
+      <PackageReference Include="MongoDB.Driver" Version="2.14.1" />
       <PackageReference Include="System.Drawing.Common" Version="6.0.0" />
       <PackageReference Include="Tesseract" Version="4.1.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="MapList.txt">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="MongoORM4NetCore.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="MongoORM4NetCore.pdb">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+      <None Update="MongoORM4NetCore.deps.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="MongoORM4NetCore, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <HintPath>MongoORM4NetCore.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
 </Project>

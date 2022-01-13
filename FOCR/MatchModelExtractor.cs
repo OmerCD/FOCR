@@ -81,10 +81,10 @@ public class MatchModelExtractor
     private static IEnumerable<StatisticLineModel> GetModels(string text)
     {
         string[] lines = text.Split("\r\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return lines.Select(GetModel);
+        return lines.Where(x=>!x.Contains('%')).Select(GetModel);
     }
 
-    public async Task<MatchModel?> CreateMatchModel(string imagesPath)
+    public async Task<HalfModel?> CreateMatchModel(string imagesPath)
     {
         var files = Directory.GetFiles(imagesPath);
         if (!files.Any())
@@ -93,30 +93,29 @@ public class MatchModelExtractor
         }
 
         var separator = new ImageSeparator(imagesPath, _imageProcessService);
-        var matchModel = new MatchModel();
+        var matchModel = new HalfModel();
         string newPath = String.Empty;
         Parallel.ForEach(files, async image =>
         {
-            newPath = separator.Separate(Path.GetFileName(image));
             newPath = separator.Separate(Path.GetFileName(image));
             var details = await _ocrService.Read(Path.Combine(newPath, $"Details.png"));
             var title = (await _ocrService.Read(Path.Combine(newPath, $"Title.png"))).Trim().Replace(" ", "").ToLower();
             switch (title)
             {
                 case "summary":
-                    matchModel.Summary = GetModels(details);
+                    matchModel.Summary = GetModels(details).ToArray();
                     break;
                 case "possession":
                     matchModel.Possession = GetPossessionModels(details.Replace("%", "")).ToArray();
                     break;
                 case "shooting":
-                    matchModel.Shooting = GetModels(details);
+                    matchModel.Shooting = GetModels(details).ToArray();
                     break;
                 case "passing":
-                    matchModel.Passing = GetModels(details);
+                    matchModel.Passing = GetModels(details).ToArray();
                     break;
                 case "defending":
-                    matchModel.Defending = GetModels(details);
+                    matchModel.Defending = GetModels(details).ToArray();
                     break;
             }
         });
